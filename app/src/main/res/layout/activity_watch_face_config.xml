@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/black"
+    android:paddingStart="@dimen/activity_config_padding"
+    android:paddingTop="@dimen/activity_config_padding"
+    android:paddingEnd="@dimen/activity_config_padding"
+    android:paddingBottom="@dimen/activity_config_padding"
+    tools:context=".editor.WatchFaceConfigActivity"
+    tools:deviceIds="wear">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/form_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:overScrollMode="ifContentScrolls"
+        android:paddingStart="@dimen/activity_config_padding"
+        android:paddingTop="@dimen/activity_config_padding"
+        android:paddingEnd="@dimen/activity_config_padding"
+        android:paddingBottom="@dimen/activity_config_padding"
+        android:scrollbarStyle="insideOverlay"
+        android:scrollbars="vertical">
+
+        <include
+            android:id="@+id/preview"
+            layout="@layout/watch_face_and_complications_preview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/activity_config_preview_of_watch_face_content_description"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/color_style_picker_button"
+            style="@style/Widget.WatchFace.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/activity_config_change_color_style_button_content_description"
+            android:gravity="start|center_vertical"
+            android:onClick="onClickColorStylePickerButton"
+            android:padding="@dimen/no_padding"
+            android:text="@string/activity_config_color_style_picker_label"
+            android:textAppearance="?attr/textAppearanceButton"
+            app:icon="@drawable/ic_launcher_foreground"
+            app:iconPadding="@dimen/activity_config_style_picker_icon_padding"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/preview" />
+
+
+        <Space
+            android:id="@+id/post_content_spacer"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/activity_config_spacer_height_post_content"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/color_style_picker_button" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

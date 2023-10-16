@@ -151,12 +151,6 @@ class DigitalWatchCanvasRenderer(
 
 
         Log.d("active", selection.toString())
-
-        if (renderParameters.drawMode == DrawMode.AMBIENT) {
-            return selection.filter { it.first < 5 }.sortedByDescending { it.first }
-                .map { Pair(it.first + 1, backwardRotateBy2(it.second)) }
-        }
-
         return selection.sortedByDescending { it.first }
             .map { Pair(it.first + 1, backwardRotateBy2(it.second)) }
     }
@@ -180,11 +174,7 @@ class DigitalWatchCanvasRenderer(
             binaryEncoding.reversed().forEachIndexed { pos, bin ->
                 if (bin == 1) {
                     val x = outerCircle - (if (index == 0) 1 else 0)
-                    if (renderParameters.drawMode == DrawMode.AMBIENT && x > 3 && (pos in 0..3)) {
-                        Log.d("ambient", "points skipped")
-                    } else {
-                        onSelection(x, pos)
-                    }
+                    onSelection(x, pos)
                 }
             }
         }
@@ -477,13 +467,6 @@ class DigitalWatchCanvasRenderer(
             canvas.drawPath(path, paint)
 
             if (circleIndex > 0) {
-                val innerCircleRadius = circleRadiusStep * (circleIndex - 1)
-                val innerOval = RectF(
-                    centerX - innerCircleRadius,
-                    centerY - innerCircleRadius,
-                    centerX + innerCircleRadius,
-                    centerY + innerCircleRadius
-                )
                 drawDarkThemeRadialGrid(
                     canvas,
                     oval.toRect(),

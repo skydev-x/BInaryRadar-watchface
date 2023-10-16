@@ -4,6 +4,10 @@ plugins {
   id 'org.jetbrains.kotlin.kapt'
 }
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
 android {
   compileSdk 34
 
@@ -13,8 +17,17 @@ android {
     applicationId "dev.dukendev.watchface.binaryradar"
     minSdk 31
     targetSdk 33
-    versionCode 4
-    versionName "1.1"
+    versionCode 8
+    versionName "1.2.1"
+  }
+
+  signingConfigs {
+    config {
+      keyAlias keystoreProperties['keyAlias']
+      keyPassword keystoreProperties['keyPassword']
+      storeFile file(keystoreProperties['storeFile'])
+      storePassword keystoreProperties['storePassword']
+    }
   }
 
   buildFeatures {
@@ -22,14 +35,18 @@ android {
   }
 
   buildTypes {
-    debug{
+    debug {
+      debuggable true
       minifyEnabled false
     }
     release {
+      debuggable false
       minifyEnabled true
       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+      signingConfig signingConfigs.config
     }
   }
+
 
   packagingOptions {
     exclude "META-INF/atomicfu.kotlin_module"
@@ -46,6 +63,8 @@ android {
 }
 
 dependencies {
+  compileOnly libs.google.wearable
+  implementation libs.play.services.wearable
   implementation libs.androidx.core.ktx
 
   // Kotlin components

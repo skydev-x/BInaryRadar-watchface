@@ -49,5 +49,6 @@ proguard-project.txt
 # Android Studio/IDEA
 *.iml
 .idea
-binaryradar_watch-face.jks
+app/binaryradar_watch-face.jks
+keystore.properties
 app/release

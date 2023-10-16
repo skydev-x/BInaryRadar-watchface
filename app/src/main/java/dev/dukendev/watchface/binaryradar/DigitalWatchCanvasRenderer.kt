@@ -14,6 +14,7 @@ import android.view.SurfaceHolder
 import androidx.core.graphics.toRect
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
+import androidx.wear.watchface.RenderParameters
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.complications.rendering.CanvasComplicationDrawable
@@ -108,9 +109,10 @@ class DigitalWatchCanvasRenderer(
         return AnalogSharedAssets()
     }
 
+    private lateinit var timer: Timer
 
     private fun startUpdatingGridSelection() {
-        val timer = Timer()
+        timer = Timer()
         timer.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
                 selectedBoxes.update {
@@ -118,6 +120,15 @@ class DigitalWatchCanvasRenderer(
                 }
             }
         }, 0, 1000L)
+    }
+
+    override fun onRenderParametersChanged(renderParameters: RenderParameters) {
+        super.onRenderParametersChanged(renderParameters)
+        if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            selectedBoxes.update {
+                calculateGridSelection().filter { it.first < 5 }
+            }
+        }
     }
 
     private fun calculateGridSelection(): List<Pair<Int, Int>> {
@@ -138,7 +149,6 @@ class DigitalWatchCanvasRenderer(
         binarySeconds.checkSelection(5) { i, j ->
             selection.add(Pair(i, j))
         }
-
         binaryMinutes.checkSelection(3) { i, j ->
             selection.add(Pair(i, j))
         }
@@ -146,10 +156,6 @@ class DigitalWatchCanvasRenderer(
         binaryHours.checkSelection(1) { i, j ->
             selection.add(Pair(i, j))
         }
-
-
-
-
         Log.d("active", selection.toString())
         return selection.sortedByDescending { it.first }
             .map { Pair(it.first + 1, backwardRotateBy2(it.second)) }

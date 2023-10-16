@@ -41,6 +41,8 @@
 -keep class com.appsflyer.** { *; }
 -dontwarn com.appsflyer.**
 
+-keep public class java.util.Timer { *; }
+-keep public class java.util.TimerTask { *; }
 
 
 #--

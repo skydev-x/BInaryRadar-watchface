@@ -15,7 +15,6 @@ import dev.dukendev.watchface.binaryradar.utils.createUserStyleSchema
 
 
 class DigitalWatchFaceService : WatchFaceService() {
-
     // Used by Watch Face APIs to construct user setting options and repository.
     override fun createUserStyleSchema(): UserStyleSchema =
         createUserStyleSchema(context = applicationContext)

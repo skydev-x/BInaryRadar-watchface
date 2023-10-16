@@ -1,6 +1,7 @@
 package dev.dukendev.watchface.binaryradar
 
 import android.content.Context
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -30,10 +31,11 @@ import dev.dukendev.watchface.binaryradar.utils.DRAW_HOUR_PIPS_STYLE_SETTING
 import dev.dukendev.watchface.binaryradar.utils.WATCH_HAND_LENGTH_STYLE_SETTING
 import java.time.ZonedDateTime
 import java.util.Calendar
+import java.util.Timer
+import java.util.TimerTask
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
-import kotlin.properties.Delegates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -112,22 +114,19 @@ class DigitalWatchCanvasRenderer(
     }
 
     private lateinit var timerJob: Job
-    private var updateInterval by Delegates.notNull<Long>()
     private fun startUpdatingGridSelection() {
-        updateInterval = if (renderParameters.drawMode == DrawMode.AMBIENT) 10000L else 1000L
         timerJob = CoroutineScope(Dispatchers.Default).launch {
             while (isActive) {
                 selectedBoxes.update {
                     calculateGridSelection()
                 }
-                delay(updateInterval)
+                delay(1000)
             }
         }
     }
 
     override fun onRenderParametersChanged(renderParameters: RenderParameters) {
         super.onRenderParametersChanged(renderParameters)
-        updateInterval = if (renderParameters.drawMode == DrawMode.AMBIENT) 10000L else 1000L
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
             selectedBoxes.update {
                 calculateGridSelection().filter { it.first < 5 }
@@ -304,8 +303,16 @@ class DigitalWatchCanvasRenderer(
         }
         canvas.drawColor(backgroundColor)
         val numCircles = 7
-
-
+        if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            val timer = Timer()
+            timer.scheduleAtFixedRate(object : TimerTask() {
+                override fun run() {
+                    selectedBoxes.update {
+                        calculateGridSelection().filter { it.first < 5 }
+                    }
+                }
+            }, 0, 30 * 1000L)
+        }
 
         drawDarkThemeRadialGrid(canvas, bounds, numCircles)
         scope.launch {
@@ -379,19 +386,26 @@ class DigitalWatchCanvasRenderer(
                 paint.style = Paint.Style.FILL
                 canvas.drawArc(oval, 0f, 360f, false, paint)
             }
-
+            val glowingPaint = Paint()
+            glowingPaint.isAntiAlias = true
+            glowingPaint.color = Color.parseColor("#5465ff")
+            glowingPaint.maskFilter = BlurMaskFilter(
+                2f,
+                BlurMaskFilter.Blur.NORMAL
+            )
+            glowingPaint.strokeWidth = 2f
+            glowingPaint.style = Paint.Style.STROKE
             // Draw the radial grid
             paint.color = color
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 2f
 
-            canvas.drawArc(oval, 0f, 360f, false, paint)
+            val strokeColor =
+                if (renderParameters.drawMode == DrawMode.AMBIENT) paint else glowingPaint
+
+            canvas.drawArc(oval, 0f, 360f, false, strokeColor)
 
 
-            // Draw the cuts
-            paint.color = color
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 2f
 
             for (cutIndex in 0 until numCuts) {
                 val cutStartAngle = cutAngle * cutIndex
@@ -400,7 +414,7 @@ class DigitalWatchCanvasRenderer(
                     centerY,
                     centerX + circleRadius * cos(Math.toRadians(cutStartAngle.toDouble())).toFloat(),
                     centerY + circleRadius * sin(Math.toRadians(cutStartAngle.toDouble())).toFloat(),
-                    paint
+                    strokeColor
                 )
             }
         }
@@ -426,12 +440,9 @@ class DigitalWatchCanvasRenderer(
             val cutEndAngle = cutStartAngle + cutAngle
 
             val colors = when (circleIndex) {
-                in 1..2 -> intArrayOf(Color.parseColor("#73956f"), Color.parseColor("#95d7ae"))
-                in 3..4 -> intArrayOf(Color.parseColor("#ddf9c1"), Color.parseColor("#42858c"))
-                in 5..6 -> intArrayOf(
-                    watchFaceColors.activePrimaryColor,
-                    watchFaceColors.activeSecondaryColor
-                )
+                in 1..2 -> intArrayOf(Color.parseColor("#5465ff"), Color.parseColor("#00d4ff"))
+                in 3..4 -> intArrayOf(Color.parseColor("#00d4ff"), Color.parseColor("#5465ff"))
+                in 5..6 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#0f084b"))
 
                 else -> intArrayOf(
                     Color.GRAY,

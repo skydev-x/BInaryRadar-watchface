@@ -30,20 +30,22 @@ import dev.dukendev.watchface.binaryradar.utils.DRAW_HOUR_PIPS_STYLE_SETTING
 import dev.dukendev.watchface.binaryradar.utils.WATCH_HAND_LENGTH_STYLE_SETTING
 import java.time.ZonedDateTime
 import java.util.Calendar
-import java.util.Timer
-import java.util.TimerTask
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.properties.Delegates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 
@@ -109,21 +111,23 @@ class DigitalWatchCanvasRenderer(
         return AnalogSharedAssets()
     }
 
-    private lateinit var timer: Timer
-
+    private lateinit var timerJob: Job
+    private var updateInterval by Delegates.notNull<Long>()
     private fun startUpdatingGridSelection() {
-        timer = Timer()
-        timer.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() {
+        updateInterval = if (renderParameters.drawMode == DrawMode.AMBIENT) 10000L else 1000L
+        timerJob = CoroutineScope(Dispatchers.Default).launch {
+            while (isActive) {
                 selectedBoxes.update {
                     calculateGridSelection()
                 }
+                delay(updateInterval)
             }
-        }, 0, 1000L)
+        }
     }
 
     override fun onRenderParametersChanged(renderParameters: RenderParameters) {
         super.onRenderParametersChanged(renderParameters)
+        updateInterval = if (renderParameters.drawMode == DrawMode.AMBIENT) 10000L else 1000L
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
             selectedBoxes.update {
                 calculateGridSelection().filter { it.first < 5 }
@@ -268,6 +272,7 @@ class DigitalWatchCanvasRenderer(
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
         scope.cancel("AnalogWatchCanvasRenderer scope clear() request")
+        timerJob.cancel("Binary watch face service not active")
         super.onDestroy()
     }
 
@@ -304,15 +309,13 @@ class DigitalWatchCanvasRenderer(
 
         drawDarkThemeRadialGrid(canvas, bounds, numCircles)
         scope.launch {
-            selectedBoxes.buffer().collectLatest { boxes ->
-                paintSelectedBoxes(
-                    canvas,
-                    bounds,
-                    7,
-                    4,
-                    boxes
-                )
-                delay(1000)
+            selectedBoxes.onEach { boxes ->
+                boxes.sortedBy { it.first }
+                if (renderParameters.drawMode == DrawMode.AMBIENT) {
+                    boxes.filter { it.first < 5 }
+                }
+            }.conflate().collectLatest {
+                paintSelectedBoxes(canvas, bounds, 7, 4, it)
             }
         }
 
@@ -344,7 +347,7 @@ class DigitalWatchCanvasRenderer(
         bounds: Rect,
         numCircles: Int,
         numCuts: Int = 4,
-        color: Int = Color.WHITE,
+        color: Int = Color.DKGRAY,
         isRemove: Boolean = false
     ) {
 
@@ -478,7 +481,7 @@ class DigitalWatchCanvasRenderer(
                     oval.toRect(),
                     circleIndex,
                     numCuts,
-                    Color.WHITE,
+                    Color.DKGRAY,
                     true
                 )
             }

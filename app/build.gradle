@@ -17,8 +17,8 @@ android {
     applicationId "dev.dukendev.watchface.binaryradar"
     minSdk 31
     targetSdk 33
-    versionCode 120
-    versionName "1.4.0"
+    versionCode 121
+    versionName "1.4.1"
   }
 
   signingConfigs {

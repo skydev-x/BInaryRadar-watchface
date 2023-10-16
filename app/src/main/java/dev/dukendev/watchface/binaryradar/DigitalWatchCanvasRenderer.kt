@@ -311,18 +311,16 @@ class DigitalWatchCanvasRenderer(
                         calculateGridSelection().filter { it.first < 5 }
                     }
                 }
-            }, 0, 30 * 1000L)
+            }, 0, 10 * 1000L)
         }
 
         drawDarkThemeRadialGrid(canvas, bounds, numCircles)
         scope.launch {
             selectedBoxes.onEach { boxes ->
                 boxes.sortedBy { it.first }
-                if (renderParameters.drawMode == DrawMode.AMBIENT) {
-                    boxes.filter { it.first < 5 }
-                }
             }.conflate().collectLatest {
                 paintSelectedBoxes(canvas, bounds, 7, 4, it)
+                delay(1000)
             }
         }
 
@@ -442,7 +440,7 @@ class DigitalWatchCanvasRenderer(
             val colors = when (circleIndex) {
                 in 1..2 -> intArrayOf(Color.parseColor("#5465ff"), Color.parseColor("#00d4ff"))
                 in 3..4 -> intArrayOf(Color.parseColor("#00d4ff"), Color.parseColor("#5465ff"))
-                in 5..6 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#0f084b"))
+                in 5..6 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#a09be7"))
 
                 else -> intArrayOf(
                     Color.GRAY,

@@ -29,13 +29,13 @@ import dev.dukendev.watchface.binaryradar.data.watchface.WatchFaceData
 import dev.dukendev.watchface.binaryradar.utils.COLOR_STYLE_SETTING
 import dev.dukendev.watchface.binaryradar.utils.DRAW_HOUR_PIPS_STYLE_SETTING
 import dev.dukendev.watchface.binaryradar.utils.WATCH_HAND_LENGTH_STYLE_SETTING
+import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.util.Calendar
+import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -125,6 +125,8 @@ class DigitalWatchCanvasRenderer(
         }
     }
 
+    private var dateText: String = ""
+
     override fun onRenderParametersChanged(renderParameters: RenderParameters) {
         super.onRenderParametersChanged(renderParameters)
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
@@ -132,6 +134,9 @@ class DigitalWatchCanvasRenderer(
                 calculateGridSelection().filter { it.first < 5 }
             }
         }
+        val cal = Calendar.getInstance()
+        val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+        dateText = dayFormat.format(cal.time)
     }
 
     private fun calculateGridSelection(): List<Pair<Int, Int>> {
@@ -271,7 +276,6 @@ class DigitalWatchCanvasRenderer(
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
         scope.cancel("AnalogWatchCanvasRenderer scope clear() request")
-        timerJob.cancel("Binary watch face service not active")
         super.onDestroy()
     }
 
@@ -302,6 +306,8 @@ class DigitalWatchCanvasRenderer(
             watchFaceColors.activeBackgroundColor
         }
         canvas.drawColor(backgroundColor)
+
+
         val numCircles = 7
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
             val timer = Timer()
@@ -312,6 +318,10 @@ class DigitalWatchCanvasRenderer(
                     }
                 }
             }, 0, 10 * 1000L)
+        } else {
+            selectedBoxes.update {
+                calculateGridSelection()
+            }
         }
 
         drawDarkThemeRadialGrid(canvas, bounds, numCircles)
@@ -325,7 +335,7 @@ class DigitalWatchCanvasRenderer(
         }
 
         drawDarkThemeRadialGrid(canvas, bounds, numCircles)
-
+        drawAxis(canvas, bounds)
 //        //complication
 //        drawComplications(canvas, zonedDateTime)
     }
@@ -380,6 +390,7 @@ class DigitalWatchCanvasRenderer(
             )
             if (isRemove) {
                 // Draw the radial grid
+                paint.strokeWidth = 0.5f
                 paint.color = backgroundColor
                 paint.style = Paint.Style.FILL
                 canvas.drawArc(oval, 0f, 360f, false, paint)
@@ -388,34 +399,68 @@ class DigitalWatchCanvasRenderer(
             glowingPaint.isAntiAlias = true
             glowingPaint.color = Color.parseColor("#5465ff")
             glowingPaint.maskFilter = BlurMaskFilter(
-                2f,
+                1f,
                 BlurMaskFilter.Blur.NORMAL
             )
-            glowingPaint.strokeWidth = 2f
+            glowingPaint.strokeWidth = 1f
             glowingPaint.style = Paint.Style.STROKE
             // Draw the radial grid
             paint.color = color
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 2f
+            paint.strokeWidth = 1f
 
             val strokeColor =
                 if (renderParameters.drawMode == DrawMode.AMBIENT) paint else glowingPaint
 
-            canvas.drawArc(oval, 0f, 360f, false, strokeColor)
 
-
-
-            for (cutIndex in 0 until numCuts) {
-                val cutStartAngle = cutAngle * cutIndex
-                canvas.drawLine(
-                    centerX,
-                    centerY,
-                    centerX + circleRadius * cos(Math.toRadians(cutStartAngle.toDouble())).toFloat(),
-                    centerY + circleRadius * sin(Math.toRadians(cutStartAngle.toDouble())).toFloat(),
-                    strokeColor
-                )
+            if (isRemove) {
+                strokeColor.strokeWidth = 0.5f
             }
+            canvas.drawArc(oval, 0f, 360f, false, strokeColor)
         }
+    }
+
+    private fun drawAxis(canvas: Canvas, bounds: Rect, isRemove: Boolean = false) {
+
+
+        val maxRadius = min(bounds.width(), bounds.height()) / 2
+        val circleRadiusStep = maxRadius / 7
+
+        val glowingPaint = Paint()
+        glowingPaint.isAntiAlias = true
+        glowingPaint.color = Color.parseColor("#5465ff")
+        glowingPaint.maskFilter = BlurMaskFilter(
+            1f,
+            BlurMaskFilter.Blur.NORMAL
+        )
+        glowingPaint.strokeWidth = 1f
+        glowingPaint.style = Paint.Style.STROKE
+        //
+        val paint = Paint()
+        paint.color = Color.DKGRAY
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1f
+        val strokeColor =
+            if (renderParameters.drawMode == DrawMode.AMBIENT) paint else glowingPaint
+
+        if (isRemove) {
+            strokeColor.strokeWidth = 0.5f
+        }
+        canvas.drawLine(
+            bounds.left.toFloat() + circleRadiusStep,
+            bounds.exactCenterY(),
+            bounds.right.toFloat() - circleRadiusStep,
+            bounds.exactCenterY(),
+            strokeColor
+        )
+
+        canvas.drawLine(
+            bounds.exactCenterX(),
+            bounds.top.toFloat() + circleRadiusStep,
+            bounds.exactCenterX(),
+            bounds.bottom.toFloat() - circleRadiusStep,
+            strokeColor
+        )
     }
 
     private fun paintSelectedBoxes(
@@ -447,8 +492,6 @@ class DigitalWatchCanvasRenderer(
                     Color.GRAY
                 ) // Fallback color if the index is out of range
             }
-
-
             val positions = floatArrayOf(0.0f, 1.0f)
 
             val shader = LinearGradient(
@@ -460,12 +503,12 @@ class DigitalWatchCanvasRenderer(
             paint.style = Paint.Style.FILL
 
             if (renderParameters.drawMode == DrawMode.AMBIENT) {
-                paint.alpha = 180
+                paint.alpha = 210
                 paint.shader = LinearGradient(
                     centerX - circleRadius, centerY, centerX + circleRadius, centerY,
                     listOf(
-                        watchFaceColors.ambientPrimaryColor,
-                        watchFaceColors.ambientSecondaryColor
+                        watchFaceColors.ambientSecondaryColor,
+                        watchFaceColors.ambientPrimaryColor
                     ).toIntArray(), positions, Shader.TileMode.CLAMP
                 )
             }

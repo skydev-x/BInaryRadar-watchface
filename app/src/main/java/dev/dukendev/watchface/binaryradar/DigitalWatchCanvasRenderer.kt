@@ -10,8 +10,11 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.SurfaceHolder
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toRect
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
@@ -102,7 +105,8 @@ class DigitalWatchCanvasRenderer(
 
     init {
         scope.launch {
-            startUpdatingGridSelection()
+//            setupTimerUpdate()
+//            startUpdatingGridSelection()
             currentUserStyleRepository.userStyle.collect { userStyle ->
                 updateWatchFaceData(userStyle)
             }
@@ -111,6 +115,15 @@ class DigitalWatchCanvasRenderer(
 
     override suspend fun createSharedAssets(): AnalogSharedAssets {
         return AnalogSharedAssets()
+    }
+
+    private fun setupTimerUpdate() {
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed({
+            selectedBoxes.update {
+                calculateGridSelection()
+            }
+        }, 1000L)
     }
 
     private lateinit var timerJob: Job
@@ -131,7 +144,7 @@ class DigitalWatchCanvasRenderer(
         super.onRenderParametersChanged(renderParameters)
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
             selectedBoxes.update {
-                calculateGridSelection().filter { it.first < 5 }
+                calculateGridSelection().filter { it.first > 2 }
             }
         }
         val cal = Calendar.getInstance()
@@ -139,7 +152,7 @@ class DigitalWatchCanvasRenderer(
         dateText = dayFormat.format(cal.time)
     }
 
-    private fun calculateGridSelection(): List<Pair<Int, Int>> {
+    private fun calculateGridSelection2(): List<Pair<Int, Int>> {
 
         val calendar = Calendar.getInstance()
         val hours = (calendar.get(Calendar.HOUR_OF_DAY)) % 24
@@ -162,6 +175,37 @@ class DigitalWatchCanvasRenderer(
         }
 
         binaryHours.checkSelection(1) { i, j ->
+            selection.add(Pair(i, j))
+        }
+        Log.d("active", selection.toString())
+        return selection.sortedByDescending { it.first }
+            .map { Pair(it.first + 1, backwardRotateBy2(it.second)) }
+    }
+
+
+    private fun calculateGridSelection(): List<Pair<Int, Int>> {
+
+        val calendar = Calendar.getInstance()
+        val hours = (calendar.get(Calendar.HOUR_OF_DAY)) % 24
+        val minutes = (calendar.get(Calendar.MINUTE)) % 60
+        val seconds = (calendar.get(Calendar.SECOND))
+
+        val binarySeconds =
+            seconds.toString().toCharArray().toList().map(Character::getNumericValue)
+        val binaryMinutes =
+            minutes.toString().toCharArray().toList().map(Character::getNumericValue)
+        val binaryHours = hours.toString().toCharArray().toList().map(Character::getNumericValue)
+        Log.d("active", "$hours:$minutes:$seconds = $binaryHours $binaryMinutes $binarySeconds")
+        val selection = mutableListOf<Pair<Int, Int>>()
+
+        binarySeconds.checkSelection(1) { i, j ->
+            selection.add(Pair(i, j))
+        }
+        binaryMinutes.checkSelection(3) { i, j ->
+            selection.add(Pair(i, j))
+        }
+
+        binaryHours.checkSelection(5) { i, j ->
             selection.add(Pair(i, j))
         }
         Log.d("active", selection.toString())
@@ -306,7 +350,24 @@ class DigitalWatchCanvasRenderer(
             watchFaceColors.activeBackgroundColor
         }
         canvas.drawColor(backgroundColor)
-
+        //draw text
+        val calendar = Calendar.getInstance()
+        val dayOfWeekFormat = SimpleDateFormat("EEEE")
+        val dayOfWeek = dayOfWeekFormat.format(calendar.time)
+        val titlePaint = Paint()
+        titlePaint.color = Color.parseColor("#ffffff")
+        titlePaint.isAntiAlias = true
+        val typeface = ResourcesCompat.getFont(context, R.font.cedarville_cursive_regular)
+        titlePaint.typeface = typeface; titlePaint.letterSpacing = 0.02F
+        titlePaint.textAlign = Paint.Align.CENTER
+        titlePaint.textSize = 18f
+        val path = Path()
+        path.addArc(
+            RectF(bounds.left + 5f, bounds.top + 5f, bounds.right - 5f, bounds.bottom - 5f),
+            105f,
+            -30f
+        )
+        canvas.drawTextOnPath(dayOfWeek, path, 0f, -8f, titlePaint)
 
         val numCircles = 7
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
@@ -314,11 +375,12 @@ class DigitalWatchCanvasRenderer(
             timer.scheduleAtFixedRate(object : TimerTask() {
                 override fun run() {
                     selectedBoxes.update {
-                        calculateGridSelection().filter { it.first < 5 }
+                        calculateGridSelection().filter { it.first > 2 }
                     }
                 }
             }, 0, 10 * 1000L)
-        } else {
+        }
+        if (renderParameters.drawMode == DrawMode.INTERACTIVE || renderParameters.drawMode == DrawMode.LOW_BATTERY_INTERACTIVE) {
             selectedBoxes.update {
                 calculateGridSelection()
             }
@@ -433,13 +495,13 @@ class DigitalWatchCanvasRenderer(
             1f,
             BlurMaskFilter.Blur.NORMAL
         )
-        glowingPaint.strokeWidth = 1f
+        glowingPaint.strokeWidth = 0.5f
         glowingPaint.style = Paint.Style.STROKE
         //
         val paint = Paint()
         paint.color = Color.DKGRAY
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 1f
+        paint.strokeWidth = 0.5f
         val strokeColor =
             if (renderParameters.drawMode == DrawMode.AMBIENT) paint else glowingPaint
 
@@ -483,9 +545,9 @@ class DigitalWatchCanvasRenderer(
             val cutEndAngle = cutStartAngle + cutAngle
 
             val colors = when (circleIndex) {
-                in 1..2 -> intArrayOf(Color.parseColor("#5465ff"), Color.parseColor("#00d4ff"))
+                in 5..6 -> intArrayOf(Color.parseColor("#5465ff"), Color.parseColor("#00d4ff"))
                 in 3..4 -> intArrayOf(Color.parseColor("#00d4ff"), Color.parseColor("#5465ff"))
-                in 5..6 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#a09be7"))
+                in 1..2 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#a09be7"))
 
                 else -> intArrayOf(
                     Color.GRAY,

@@ -350,24 +350,8 @@ class DigitalWatchCanvasRenderer(
             watchFaceColors.activeBackgroundColor
         }
         canvas.drawColor(backgroundColor)
-        //draw text
-        val calendar = Calendar.getInstance()
-        val dayOfWeekFormat = SimpleDateFormat("EEEE")
-        val dayOfWeek = dayOfWeekFormat.format(calendar.time)
-        val titlePaint = Paint()
-        titlePaint.color = Color.parseColor("#ffffff")
-        titlePaint.isAntiAlias = true
-        val typeface = ResourcesCompat.getFont(context, R.font.cedarville_cursive_regular)
-        titlePaint.typeface = typeface; titlePaint.letterSpacing = 0.02F
-        titlePaint.textAlign = Paint.Align.CENTER
-        titlePaint.textSize = 18f
-        val path = Path()
-        path.addArc(
-            RectF(bounds.left + 5f, bounds.top + 5f, bounds.right - 5f, bounds.bottom - 5f),
-            105f,
-            -30f
-        )
-        canvas.drawTextOnPath(dayOfWeek, path, 0f, -8f, titlePaint)
+
+        drawTextComponents(canvas, bounds)
 
         val numCircles = 7
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
@@ -400,6 +384,52 @@ class DigitalWatchCanvasRenderer(
         drawAxis(canvas, bounds)
 //        //complication
 //        drawComplications(canvas, zonedDateTime)
+    }
+
+
+    private fun drawTextComponents(canvas: Canvas, bounds: Rect) {
+
+        //draw text
+        val calendar = Calendar.getInstance()
+        val dayOfWeekFormat = SimpleDateFormat("EEEE")
+        val dateFormat = SimpleDateFormat("dd:MMM")
+        val dateDayMonth = dateFormat.format(calendar.time)
+        val dayOfWeek = dayOfWeekFormat.format(calendar.time)
+        val titlePaint = Paint()
+        titlePaint.color = Color.parseColor("#ffffff")
+        titlePaint.isAntiAlias = true
+        val typeface = ResourcesCompat.getFont(context, R.font.cedarville_cursive_regular)
+        titlePaint.typeface = typeface; titlePaint.letterSpacing = 0.02F
+        titlePaint.textAlign = Paint.Align.CENTER
+        titlePaint.textSize = 18f
+        val path = Path()
+        path.addArc(
+            RectF(bounds.left + 5f, bounds.top + 5f, bounds.right - 5f, bounds.bottom - 5f),
+            105f,
+            -30f
+        )
+        canvas.drawTextOnPath(dayOfWeek, path, 0f, -8f, titlePaint)
+
+
+        val datePath = Path()
+        datePath.addArc(
+            RectF(bounds.left + 5f, bounds.top + 5f, bounds.right - 5f, bounds.bottom - 5f),
+            -105f,
+            30f
+        )
+        val (day, month) = dateDayMonth.split(":")
+        val dateText = "$month , ${day.toInt().addSuffix()}"
+
+        canvas.drawTextOnPath(dateText, datePath, 0f, 16f, titlePaint)
+    }
+
+    private fun Int.addSuffix(): String {
+        return when {
+            this % 10 == 1 -> "$this st"
+            this % 10 == 2 -> "$this nd"
+            this % 10 == 3 -> "$this rd"
+            else -> "$this th"
+        }
     }
 
     private fun backwardRotateBy2(number: Int): Int {

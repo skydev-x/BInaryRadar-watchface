@@ -18,8 +18,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toRect
 import androidx.core.graphics.withRotation
 import androidx.core.graphics.withScale
-import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListUpdateCallback
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.RenderParameters
@@ -30,7 +28,6 @@ import androidx.wear.watchface.complications.rendering.ComplicationDrawable
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyle
 import androidx.wear.watchface.style.UserStyleSetting
-import androidx.wear.watchface.style.WatchFaceLayer
 import dev.dukendev.watchface.binaryradar.data.watchface.ColorStyleIdAndResourceIds
 import dev.dukendev.watchface.binaryradar.data.watchface.WatchFaceColorPalette
 import dev.dukendev.watchface.binaryradar.data.watchface.WatchFaceData
@@ -374,10 +371,14 @@ class DigitalWatchCanvasRenderer(
         val dateDayMonth = dateFormat.format(calendar.time)
         val dayOfWeek = dayOfWeekFormat.format(calendar.time)
         val titlePaint = Paint()
-        titlePaint.color = Color.parseColor("#ffffff")
+        titlePaint.color = if (renderParameters.drawMode == DrawMode.AMBIENT) {
+            watchFaceColors.ambientSecondaryColor
+        } else {
+            Color.parseColor("#5465ff")
+        }
         titlePaint.isAntiAlias = true
         val typeface = ResourcesCompat.getFont(context, R.font.ubuntu_mono_bold)
-        titlePaint.typeface = typeface; titlePaint.letterSpacing = 0.02F
+        titlePaint.typeface = typeface; titlePaint.letterSpacing = 0.01F
         titlePaint.textAlign = Paint.Align.CENTER
         titlePaint.textSize = 18f
         val path = Path()
@@ -561,7 +562,7 @@ class DigitalWatchCanvasRenderer(
         val backgroundColor = if (renderParameters.drawMode == DrawMode.AMBIENT) {
             watchFaceColors.ambientBackgroundColor
         } else {
-            watchFaceColors.activeBackgroundColor
+            watchFaceColors.ambientBackgroundColor
         }
         val centerX = bounds.centerX().toFloat()
         val centerY = bounds.centerY().toFloat()

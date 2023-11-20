@@ -2,7 +2,7 @@
 <resources>
     <!-- constants for watch face element renderer. -->
     <dimen name="hour_mark_size">10sp</dimen>
-    <dimen name="clock_hand_stroke_width">2dp</dimen>
+    <dimen name="clock_hand_stroke_width">5dp</dimen>
 
     <!-- Values for WatchFaceConfigActivity -->
     <dimen name="activity_config_padding">6dp</dimen>

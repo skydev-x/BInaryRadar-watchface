@@ -28,6 +28,12 @@ android {
       storeFile file(keystoreProperties['storeFile'])
       storePassword keystoreProperties['storePassword']
     }
+    debug {
+      storeFile rootProject.file('debug.keystore')
+      keyAlias 'androiddebugkey'
+      keyPassword 'android'
+      storePassword 'android'
+    }
   }
 
   buildFeatures {
@@ -43,7 +49,7 @@ android {
       debuggable false
       minifyEnabled true
       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-      signingConfig signingConfigs.config
+      signingConfig signingConfigs.debug
     }
   }
 

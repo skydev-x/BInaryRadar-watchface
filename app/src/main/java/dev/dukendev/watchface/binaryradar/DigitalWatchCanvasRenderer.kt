@@ -88,23 +88,25 @@ class DigitalWatchCanvasRenderer(
     private val scope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    // Represents all data needed to render the watch face. All value defaults are constants. Only
-    // three values are changeable by the user (color scheme, ticks being rendered, and length of
-    // the minute arm). Those dynamic values are saved in the watch face APIs and we update those
-    // here (in the renderer) through a Kotlin Flow.
     private var watchFaceData: WatchFaceData = WatchFaceData()
 
-    // Converts resource ids into Colors and ComplicationDrawable.
     private var watchFaceColors = WatchFaceColorPalette.convertToWatchFaceColorPalette(
         context,
         watchFaceData.activeColorStyle,
         watchFaceData.ambientColorStyle
     )
 
-    // Changed when setting changes cause a change in the minute hand arm (triggered by user in
-    // updateUserStyle() via userStyleRepository.addUserStyleListener()).
     private var armLengthChangedRecalculateClockHands: Boolean = false
-
+    private lateinit var timerJob: Job
+    private var dateText: String = ""
+    private val isSecondsGridEnabled = false
+    private var currentWatchFaceSize = Rect(0, 0, 0, 0)
+    private val clockHandPaint = Paint().apply {
+        isAntiAlias = true
+        strokeWidth =
+            context.resources.getDimensionPixelSize(R.dimen.clock_hand_stroke_width).toFloat()
+    }
+    private lateinit var secondHand: Path
 
     init {
         scope.launch {
@@ -129,7 +131,6 @@ class DigitalWatchCanvasRenderer(
         }, 1000L)
     }
 
-    private lateinit var timerJob: Job
     private fun startUpdatingGridSelection() {
         timerJob = CoroutineScope(Dispatchers.Default).launch {
             while (isActive) {
@@ -141,7 +142,6 @@ class DigitalWatchCanvasRenderer(
         }
     }
 
-    private var dateText: String = ""
 
     override fun onRenderParametersChanged(renderParameters: RenderParameters) {
         super.onRenderParametersChanged(renderParameters)
@@ -154,8 +154,6 @@ class DigitalWatchCanvasRenderer(
         val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
         dateText = dayFormat.format(cal.time)
     }
-
-    private val isSecondsGridEnabled = false
 
     private fun calculateGridSelection(): List<Pair<Int, Int>> {
 
@@ -190,7 +188,6 @@ class DigitalWatchCanvasRenderer(
             .map { Pair(it.first + 1, backwardRotateBy2(it.second)) }
     }
 
-
     private fun List<Int>.checkSelection(outerCircle: Int, onSelection: (Int, Int) -> Unit) {
         val operation: MutableList<Int> = mutableListOf()
         if (this.size == 1) {
@@ -214,7 +211,6 @@ class DigitalWatchCanvasRenderer(
             }
         }
     }
-
 
     /*
      * Triggered when the user makes changes to the watch face through the settings activity. The
@@ -324,7 +320,7 @@ class DigitalWatchCanvasRenderer(
         val backgroundColor = if (renderParameters.drawMode == DrawMode.AMBIENT) {
             watchFaceColors.ambientBackgroundColor
         } else {
-            watchFaceColors.activeBackgroundColor
+            watchFaceColors.ambientBackgroundColor
         }
         canvas.drawColor(backgroundColor)
 
@@ -334,7 +330,7 @@ class DigitalWatchCanvasRenderer(
         val numCircles = 7
         if (renderParameters.drawMode == DrawMode.AMBIENT) {
             val timer = Timer()
-            timer.scheduleAtFixedRate(object : TimerTask() {
+            timer.schedule(object : TimerTask() {
                 override fun run() {
                     selectedBoxes.update {
                         calculateGridSelection().filter { it.first < 5 }
@@ -360,7 +356,6 @@ class DigitalWatchCanvasRenderer(
 
         drawClockHands(canvas, bounds, zonedDateTime)
     }
-
 
     private fun drawTextComponents(canvas: Canvas, bounds: Rect) {
 
@@ -402,16 +397,6 @@ class DigitalWatchCanvasRenderer(
         canvas.drawTextOnPath(dateText, datePath, 0f, 16f, titlePaint)
     }
 
-    private var currentWatchFaceSize = Rect(0, 0, 0, 0)
-
-    private val clockHandPaint = Paint().apply {
-        isAntiAlias = true
-        strokeWidth =
-            context.resources.getDimensionPixelSize(R.dimen.clock_hand_stroke_width).toFloat()
-    }
-
-    private lateinit var secondHand: Path
-
     private fun recalculateClockHands(bounds: Rect) {
         Log.d(TAG, "recalculateClockHands()")
         secondHand =
@@ -430,10 +415,6 @@ class DigitalWatchCanvasRenderer(
         bounds: Rect,
         zonedDateTime: ZonedDateTime
     ) {
-        // Only recalculate bounds (watch face size/surface) has changed or the arm of one of the
-        // clock hands has changed (via user input in the settings).
-        // NOTE: Watch face surface usually only updates one time (when the size of the device is
-        // initially broadcasted).
         if (currentWatchFaceSize != bounds || armLengthChangedRecalculateClockHands) {
             armLengthChangedRecalculateClockHands = false
             currentWatchFaceSize = bounds
@@ -471,7 +452,6 @@ class DigitalWatchCanvasRenderer(
             }
         }
     }
-
 
     /**
      * Returns a round rect clock hand if {@code rx} and {@code ry} equals to 0, otherwise return a

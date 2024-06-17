@@ -99,7 +99,7 @@ class DigitalWatchCanvasRenderer(
     private var armLengthChangedRecalculateClockHands: Boolean = false
     private lateinit var timerJob: Job
     private var dateText: String = ""
-    private val isSecondsGridEnabled = false
+    private val isSecondsGridEnabled = true
     private var currentWatchFaceSize = Rect(0, 0, 0, 0)
     private val clockHandPaint = Paint().apply {
         isAntiAlias = true
@@ -107,6 +107,7 @@ class DigitalWatchCanvasRenderer(
             context.resources.getDimensionPixelSize(R.dimen.clock_hand_stroke_width).toFloat()
     }
     private lateinit var secondHand: Path
+    private val isSecondsHandEnabled = false
 
     init {
         scope.launch {
@@ -442,7 +443,7 @@ class DigitalWatchCanvasRenderer(
             )
             clockHandPaint.style = Paint.Style.FILL
             clockHandPaint.shader = shader
-            if (!drawAmbient) {
+            if (!drawAmbient && isSecondsHandEnabled) {
                 val secondsPerSecondHandRotation = Duration.ofMinutes(1).seconds
                 val secondsRotation = secondOfDay.rem(secondsPerSecondHandRotation) * 360.0f /
                     secondsPerSecondHandRotation
@@ -656,9 +657,9 @@ class DigitalWatchCanvasRenderer(
             val cutEndAngle = cutStartAngle + cutAngle
 
             val colors = when (circleIndex) {
-                in 1..2 -> intArrayOf(Color.parseColor("#5465ff"), Color.parseColor("#00d4ff"))
+                in 1..2 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#a09be7"))
                 in 3..4 -> intArrayOf(Color.parseColor("#00d4ff"), Color.parseColor("#5465ff"))
-                in 5..6 -> intArrayOf(Color.parseColor("#362E78"), Color.parseColor("#a09be7"))
+                in 5..6 -> intArrayOf(Color.parseColor("#051937"), Color.parseColor("#004d7a"))
 
                 else -> intArrayOf(
                     Color.GRAY,
